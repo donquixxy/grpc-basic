@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+package model;
+
+option go_package = ".";
+
+
+message Company {
+    string name = 1;
+    string phone = 2;
+}
+
+message ListCompany {
+    repeated Company list = 1;
+}
+
+service CompanyServices {
+    rpc CreateCompany (Company) returns (Company);
+    rpc GetAll (google.protobuf.Empty) returns (ListCompany);
+}
