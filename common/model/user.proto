@@ -23,7 +23,7 @@ message ByName {
 service Users {
     rpc CreateUser (UserServices) returns (UserServices);
     rpc GetListUser (google.protobuf.Empty) returns (ListUsers);
-    rpc GetByName () returns (UserServices);
+    rpc GetByName (ByName) returns (UserServices);
 }
 
     
