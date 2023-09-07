@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/go-playground/validator/v10"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
@@ -18,25 +19,33 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+var vdtor *validator.Validate
+
+func initValidator() {
+	vdtor = validator.New()
+}
+
 var localUser *m.ListUsers
 
 func main() {
 
 	initUser()
 
-	srv := grpc.NewServer()
+	config := config.InitConfig()
 
+	srv := grpc.NewServer()
+	initValidator()
 	reflection.Register(srv)
 
 	m.RegisterUsersServer(srv, &UsersServer{})
 
-	listener, err := net.Listen("tcp", config.SERVICE_USER_PORT)
+	listener, err := net.Listen("tcp", config.ServerConf.SERVICE_USER_PORT)
+
+	log.Println(config.ServerConf.SERVICE_USER_PORT)
 
 	if err != nil {
 		log.Fatalf("failed to listen %v", err)
 	}
-
-	log.Println(listener.Addr())
 
 	go func() {
 		if err = srv.Serve(listener); err != nil {
@@ -51,7 +60,6 @@ func main() {
 }
 
 func initUser() {
-
 	localUser = new(m.ListUsers)
 	localUser.List = make([]*m.UserServices, 0)
 }
@@ -64,9 +72,19 @@ func (s *UsersServer) CreateUser(ctx context.Context, v *m.UserServices) (*m.Use
 
 	log.Println("called func")
 
-	if v.Name == "" {
-		log.Println("error here")
-		return nil, status.Error(codes.Unknown, "name cannot be empty")
+	err := vdtor.Var(v.Name, "required")
+
+	if err != nil {
+		log.Printf("name is empty %v", err)
+		return nil, status.Error(codes.Canceled, "Name is required")
+	}
+
+	if err = vdtor.Var(v.Phone, "required"); err != nil {
+		return nil, status.Error(codes.Canceled, "Phone is required")
+	}
+
+	if err = vdtor.Var(v.Age, "required"); err != nil {
+		return nil, status.Error(codes.Canceled, "Age is required")
 	}
 
 	localUser.List = append(localUser.List, v)
@@ -77,6 +95,7 @@ func (s *UsersServer) CreateUser(ctx context.Context, v *m.UserServices) (*m.Use
 }
 
 func (s *UsersServer) GetListUser(ctx context.Context, v *emptypb.Empty) (*m.ListUsers, error) {
+
 	return &m.ListUsers{
 		List: localUser.List,
 	}, nil

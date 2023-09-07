@@ -15,7 +15,9 @@ import (
 
 func main() {
 
-	se := userService()
+	conf := config.InitConfig()
+
+	se := userService(conf)
 
 	v, err := se.CreateUser(context.Background(), &m.UserServices{
 		Name:  NameGenerator(),
@@ -30,9 +32,9 @@ func main() {
 	log.Println("Created user :", v)
 }
 
-func userService() m.UsersClient {
+func userService(conf *config.AppConfig) m.UsersClient {
 
-	conn, err := grpc.Dial(config.SERVICE_USER_PORT, grpc.WithInsecure())
+	conn, err := grpc.Dial(conf.ServerConf.SERVICE_USER_PORT, grpc.WithInsecure())
 
 	if err != nil {
 		log.Fatalf("failed to connect server rpc %v", err)
