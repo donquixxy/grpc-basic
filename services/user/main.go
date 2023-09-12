@@ -93,12 +93,11 @@ func (s *UsersServer) CreateUser(ctx context.Context, v *m.SingleUser) (*m.Singl
 		return nil, status.Error(codes.Canceled, err.Error())
 	}
 
-	log.Println("User created :", localUser.String())
-
 	return v, nil
 }
 
 func (s *UsersServer) GetListUser(ctx context.Context, v *emptypb.Empty) (*m.ListUsers, error) {
+	lists := new(m.ListUsers)
 
 	listItem := s.userRepository.GetListUser()
 
@@ -106,13 +105,9 @@ func (s *UsersServer) GetListUser(ctx context.Context, v *emptypb.Empty) (*m.Lis
 		return nil, status.Error(codes.NotFound, "no data found")
 	}
 
-	var lists *m.ListUsers
-	log.Println("List :", lists)
 	for _, i := range listItem {
-		log.Println("V :", i.ToUserProtoMappter())
+		lists.List = append(lists.List, i.ToUserProtoMappter())
 	}
 
-	return &m.ListUsers{
-		List: lists.List,
-	}, nil
+	return lists, nil
 }
