@@ -19,11 +19,7 @@ func main() {
 
 	se := userService(conf)
 
-	v, err := se.CreateUser(context.Background(), &m.UserServices{
-		Name:  NameGenerator(),
-		Phone: "01231",
-		Age:   "123",
-	})
+	v, err := se.CreateUser(context.Background(), &m.SingleUser{})
 
 	if err != nil {
 		log.Fatalf("failed to create %v", err)

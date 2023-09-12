@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"gokit-basic/common/config"
 	m "gokit-basic/common/model"
+	"gokit-basic/repository/postgres"
+	"gokit-basic/services/user/domain"
+	"gokit-basic/services/user/repo"
 	"log"
 	"net"
 	"os"
@@ -29,15 +31,17 @@ var localUser *m.ListUsers
 
 func main() {
 
-	initUser()
-
 	config := config.InitConfig()
+	db := postgres.InitDatabase(config)
+	repo := repo.NewUserRepo(db)
 
 	srv := grpc.NewServer()
 	initValidator()
 	reflection.Register(srv)
 
-	m.RegisterUsersServer(srv, &UsersServer{})
+	m.RegisterUsersServer(srv, &UsersServer{
+		userRepository: repo,
+	})
 
 	listener, err := net.Listen("tcp", config.ServerConf.SERVICE_USER_PORT)
 
@@ -59,16 +63,12 @@ func main() {
 	<-quit
 }
 
-func initUser() {
-	localUser = new(m.ListUsers)
-	localUser.List = make([]*m.UserServices, 0)
-}
-
 type UsersServer struct {
+	userRepository repo.UserRepo
 	m.UnimplementedUsersServer
 }
 
-func (s *UsersServer) CreateUser(ctx context.Context, v *m.UserServices) (*m.UserServices, error) {
+func (s *UsersServer) CreateUser(ctx context.Context, v *m.SingleUser) (*m.SingleUser, error) {
 
 	log.Println("called func")
 
@@ -76,18 +76,22 @@ func (s *UsersServer) CreateUser(ctx context.Context, v *m.UserServices) (*m.Use
 
 	if err != nil {
 		log.Printf("name is empty %v", err)
-		return nil, status.Error(codes.Canceled, "Name is required")
+		return nil, status.Error(codes.InvalidArgument, "Name is required")
 	}
 
 	if err = vdtor.Var(v.Phone, "required"); err != nil {
-		return nil, status.Error(codes.Canceled, "Phone is required")
+		return nil, status.Error(codes.InvalidArgument, "Phone is required")
 	}
 
 	if err = vdtor.Var(v.Age, "required"); err != nil {
-		return nil, status.Error(codes.Canceled, "Age is required")
+		return nil, status.Error(codes.InvalidArgument, "Age is required")
 	}
 
-	localUser.List = append(localUser.List, v)
+	_, err = s.userRepository.CreateUser(domain.ToUserDomainMapper(v))
+
+	if err != nil {
+		return nil, status.Error(codes.Canceled, err.Error())
+	}
 
 	log.Println("User created :", localUser.String())
 
@@ -96,17 +100,19 @@ func (s *UsersServer) CreateUser(ctx context.Context, v *m.UserServices) (*m.Use
 
 func (s *UsersServer) GetListUser(ctx context.Context, v *emptypb.Empty) (*m.ListUsers, error) {
 
-	return &m.ListUsers{
-		List: localUser.List,
-	}, nil
-}
+	listItem := s.userRepository.GetListUser()
 
-func (s *UsersServer) GetByName(ctx context.Context, v *m.ByName) (*m.UserServices, error) {
-
-	for _, item := range localUser.List {
-		if item.Name == v.Name {
-			return item, nil
-		}
+	if len(listItem) == 0 {
+		return nil, status.Error(codes.NotFound, "no data found")
 	}
-	return nil, status.Error(codes.NotFound, fmt.Sprintf("User %s not found", v.Name))
+
+	var lists *m.ListUsers
+	log.Println("List :", lists)
+	for _, i := range listItem {
+		log.Println("V :", i.ToUserProtoMappter())
+	}
+
+	return &m.ListUsers{
+		List: lists.List,
+	}, nil
 }

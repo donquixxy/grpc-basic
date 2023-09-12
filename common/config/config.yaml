@@ -3,7 +3,7 @@ serverconf:
   SERVICE_USER_PORT : :7001
 databaseconf:
   driver: postgres
-  username: root
+  username: agusari
   password: 12345678
   port: 37892
   dbname: postgres
