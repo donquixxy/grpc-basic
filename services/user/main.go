@@ -27,8 +27,6 @@ func initValidator() {
 	vdtor = validator.New()
 }
 
-var localUser *m.ListUsers
-
 func main() {
 
 	config := config.InitConfig()

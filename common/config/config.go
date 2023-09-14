@@ -29,7 +29,7 @@ type AppConfig struct {
 func InitConfig() *AppConfig {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath("../../common/config")
+	viper.AddConfigPath("../../../common/config")
 
 	err := viper.ReadInConfig()
 
